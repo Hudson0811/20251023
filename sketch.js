@@ -149,6 +149,150 @@ function draw() {
             fireworks.splice(i, 1);
         }
     }
+    // =================================================================
+// 步驟三：煙火粒子系統定義 (Firework 和 Particle 類別)
+// -----------------------------------------------------------------
+
+// 全域重力向量
+const gravity = 0.2; 
+const colors = [];
+
+// 在 setup() 中初始化顏色
+function initColors() {
+    for (let i = 0; i < 255; i++) {
+        // 使用 HSB 色彩模式創建彩虹色
+        colors.push(color(random(255), 255, 255)); 
+    }
+}
+
+// 粒子類別 (Particle Class) - 構成爆炸碎片
+class Particle {
+    constructor(x, y, hu, firework) {
+        this.pos = createVector(x, y);
+        this.firework = firework; // 是否為發射中的火箭 (true) 或爆炸後的碎片 (false)
+        this.lifespan = 255; 
+        this.hu = hu;
+        
+        if (this.firework) {
+            // 火箭向上發射
+            this.vel = createVector(random(-1.5, 1.5), random(-10, -15));
+        } else {
+            // 爆炸碎片向外發散
+            this.vel = p5.Vector.random2D();
+            this.vel.mult(random(2, 10)); // 隨機速度
+        }
+        this.acc = createVector(0, 0);
+    }
+
+    // 施加力 (例如重力)
+    applyForce(force) {
+        this.acc.add(force);
+    }
+
+    // 更新粒子狀態
+    update() {
+        if (!this.firework) {
+            // 碎片會衰減並受到重力影響
+            this.vel.mult(0.95); // 摩擦力/空氣阻力
+            this.lifespan -= 4; // 壽命減少
+            this.applyForce(createVector(0, gravity));
+        }
+        this.vel.add(this.acc);
+        this.pos.add(this.vel);
+        this.acc.mult(0); // 清除加速度
+    }
+
+    // 判斷粒子是否結束
+    isFinished() {
+        return this.lifespan < 0;
+    }
+
+    // 繪製粒子
+    show() {
+        colorMode(HSB);
+        
+        if (!this.firework) {
+            // 碎片
+            strokeWeight(2);
+            stroke(this.hu, 255, 255, this.lifespan);
+        } else {
+            // 火箭
+            strokeWeight(4);
+            stroke(this.hu, 255, 255);
+        }
+        point(this.pos.x, this.pos.y);
+        colorMode(RGB); // 恢復 RGB 模式，避免影響其他繪圖
+    }
+}
+
+// 煙火類別 (Firework Class) - 代表一個完整的煙火從發射到爆炸
+class Firework {
+    constructor() {
+        // 隨機發射位置在畫布底部
+        this.hu = random(255); // 隨機顏色
+        this.firework = new Particle(random(width), height, this.hu, true); // 火箭粒子
+        this.exploded = false;
+        this.particles = [];
+    }
+
+    // 檢查煙火是否完成 (火箭爆炸且所有碎片都消失)
+    isFinished() {
+        return (this.exploded && this.particles.length === 0);
+    }
+
+    // 爆炸
+    explode() {
+        // 產生 100 個碎片粒子
+        for (let i = 0; i < 100; i++) {
+            let p = new Particle(this.firework.pos.x, this.firework.pos.y, this.hu, false);
+            this.particles.push(p);
+        }
+    }
+
+    // 更新煙火狀態
+    update() {
+        if (!this.exploded) {
+            this.firework.update();
+
+            // 如果火箭速度開始向下 (到達最高點)
+            if (this.firework.vel.y >= 0) {
+                this.exploded = true;
+                this.explode();
+            }
+        }
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            this.particles[i].update();
+            if (this.particles[i].isFinished()) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+
+    // 繪製煙火
+    show() {
+        if (!this.exploded) {
+            this.firework.show();
+        }
+
+        for (let i = 0; i < this.particles.length; i++) {
+            this.particles[i].show();
+        }
+    }
+}
+
+
+// --- 警告：您還需要在 setup() 中加入顏色模式設定！ ---
+// 請修改您的 setup 函數，讓顏色模式能夠支援煙火的 HSB 顏色。
+
+/* 您的 setup() 應該修改為：
+function setup() { 
+    createCanvas(windowWidth / 2, windowHeight / 2); 
+    background(0); // 將背景設為黑色，煙火效果更明顯
+    colorMode(HSB, 255); // 設定為 HSB 顏色模式，H:0-255, S:0-255, B:0-255
+    // noLoop(); // 由於需要動畫，此行應移除或註解
+} 
+*/
 
     // 如果您想要更複雜的視覺效果，還可以根據分數修改線條粗細 (strokeWeight) 
     // 或使用 sin/cos 函數讓圖案的動畫效果有所不同 
