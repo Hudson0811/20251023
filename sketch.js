@@ -1,44 +1,33 @@
 // =================================================================
-// 步驟一：模擬成績數據接收
+// 全域變數和資料接收
 // -----------------------------------------------------------------
-
-
-// let scoreText = "成績分數: " + finalScore + "/" + maxScore;
-// 確保這是全域變數
 let finalScore = 0; 
 let maxScore = 0;
-let scoreText = ""; // 用於 p5.js 繪圖的文字
+let scoreText = ""; 
+let fireworks = []; // 用於管理煙火特效的全域陣列
 
-// !!! 新增：用於管理煙火特效的全域陣列 !!!
-let fireworks = []; 
-
+// H5P 分數接收事件監聽
 window.addEventListener('message', function (event) {
-    // 執行來源驗證...
-    // ...
+    // ... 執行來源驗證...
     const data = event.data;
     
     if (data && data.type === 'H5P_SCORE_RESULT') {
         
-        // !!! 關鍵步驟：更新全域變數 !!!
-        const previousPercentage = maxScore > 0 ? (finalScore / maxScore) * 100 : 0; // 計算舊百分比
+        const previousPercentage = maxScore > 0 ? (finalScore / maxScore) * 100 : 0;
         
-        finalScore = data.score; // 更新全域變數
+        finalScore = data.score;
         maxScore = data.maxScore;
         scoreText = `最終成績分數: ${finalScore}/${maxScore}`;
         
         console.log("新的分數已接收:", scoreText); 
         
-        const newPercentage = maxScore > 0 ? (finalScore / maxScore) * 100 : 0; // 計算新百分比
+        const newPercentage = maxScore > 0 ? (finalScore / maxScore) * 100 : 0;
         
-        // !!! 關鍵步驟：如果分數從 < 90 跳到 >= 90，則清除舊煙火並準備發射新煙火 (可選)
+        // 如果分數從 < 90 跳到 >= 90，則清除舊煙火並準備發射新煙火
         if (newPercentage >= 90 && previousPercentage < 90) {
-            // 清空舊的煙火，讓新的分數狀態重新開始 (可選)
             fireworks = []; 
         }
 
-        // ----------------------------------------
-        // 關鍵步驟 2: 呼叫重新繪製 (見方案二)
-        // ----------------------------------------
         if (typeof redraw === 'function') {
             redraw(); 
         }
@@ -47,131 +36,106 @@ window.addEventListener('message', function (event) {
 
 
 // =================================================================
-// 步驟二：使用 p5.js 繪製分數 (在網頁 Canvas 上顯示)
+// P5.JS 核心函數
 // -----------------------------------------------------------------
 
 function setup() { 
-    // ... (其他設置)
     createCanvas(windowWidth / 2, windowHeight / 2); 
-    background(255); 
-    // 移除 noLoop()，因為煙火需要連續繪製動畫。
-    // 如果您需要保持 noLoop()，則需要在 firework 啟動時使用 loop()，結束時使用 noLoop()
-    // 這裡我們假設使用 loop()
-    // noLoop(); 
+    background(0); // 黑色背景 (煙火效果更明顯)
+    colorMode(HSB, 255); // 關鍵：設定顏色模式為 HSB (Hue, Saturation, Brightness)，範圍 0-255
+    // noLoop() 註解，讓 draw() 連續執行以呈現動畫
 } 
 
-// score_display.js 中的 draw() 函數片段
-
 function draw() { 
-    // 為了煙火軌跡效果，背景用低透明度重新繪製 (0, 25)
-    background(0, 0, 0, 25); // 稍微透明的黑色，形成殘影效果
+    // 為了煙火軌跡效果，背景用低透明度重新繪製 (0, 25)，產生殘影效果
+    background(0, 0, 0, 25); 
 
-    // 計算百分比
     let percentage = (finalScore / maxScore) * 100;
 
     textSize(80); 
     textAlign(CENTER);
     
-    // -----------------------------------------------------------------
-    // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
-    // -----------------------------------------------------------------
+    // --- A. 根據分數區間改變文本顏色和內容 ---
+    
     if (percentage >= 90) {
-        // 滿分或高分：顯示鼓勵文本，使用鮮豔顏色
-        fill(0, 200, 50); // 綠色 
+        // HSB 亮綠色: H:90, S:255, B:200
+        fill(90, 255, 200); 
         text("恭喜！優異成績！", width / 2, height / 2 - 50);
         
-        // !!! 新增：煙火發射邏輯 !!!
+        // !!! 煙火發射邏輯 !!!
         // 每幀以一定的機率（例如 4%）發射一個新的煙火。
         if (random(1) < 0.04) {
-            // 假設 Firework 類別已定義，且 new Firework() 會在畫布底部隨機位置產生煙花火箭
-            // 注意：這個類別必須在另一個檔案（如 firework.js）或在 setup/draw 之外定義
-            // 為了讓這段程式碼運行，您需要額外實現 Firework 和 Particle 類別。
-            // 這裡我們只是將邏輯加入 draw()。
-            if (typeof Firework === 'function') {
-                 fireworks.push(new Firework()); 
-            } else {
-                 console.warn("Firework 類別未定義，請補齊相關程式碼。");
-            }
+            fireworks.push(new Firework()); 
         }
         
     } else if (percentage >= 60) {
-        // 中等分數：顯示一般文本，使用黃色 
-        fill(255, 181, 35); 
+        // HSB 亮黃色: H:40, S:220, B:255
+        fill(40, 220, 255); 
         text("成績良好，請再接再厲。", width / 2, height / 2 - 50);
         
     } else if (percentage > 0) {
-        // 低分：顯示警示文本，使用紅色 
-        fill(200, 0, 0); 
+        // HSB 紅色: H:0, S:255, B:200
+        fill(0, 255, 200); 
         text("需要加強努力！", width / 2, height / 2 - 50);
         
     } else {
-        // 尚未收到分數或分數為 0
-        fill(150);
+        // HSB 灰色: H:0, S:0, B:150
+        fill(0, 0, 150);
         text(scoreText, width / 2, height / 2);
     }
 
     // 顯示具體分數
     textSize(50);
-    fill(50);
+    // HSB 深灰黑色: H:0, S:0, B:50
+    fill(0, 0, 50);
     text(`得分: ${finalScore}/${maxScore}`, width / 2, height / 2 + 50);
     
     
-    // -----------------------------------------------------------------
-    // B. 根據分數觸發不同的幾何圖形反映 (畫面反映二)
-    // -----------------------------------------------------------------
+    // --- B. 根據分數觸發不同的幾何圖形反映 ---
     
     if (percentage >= 90) {
-        // 畫一個大圓圈代表完美 
-        fill(0, 200, 50, 150); // 帶透明度
+        // HSB 亮綠色 + 150 透明度
+        fill(90, 255, 200, 150); 
         noStroke();
         circle(width / 2, height / 2 + 150, 150);
         
     } else if (percentage >= 60) {
-        // 畫一個方形 
-        fill(255, 181, 35, 150);
+        // HSB 亮黃色 + 150 透明度
+        fill(40, 220, 255, 150);
         rectMode(CENTER);
         rect(width / 2, height / 2 + 150, 150, 150);
     }
     
-    // -----------------------------------------------------------------
-    // C. 煙火動畫更新與繪製
-    // -----------------------------------------------------------------
+    // --- C. 煙火動畫更新與繪製 ---
     
     // 遍歷所有煙火，更新其狀態並繪製
     for (let i = fireworks.length - 1; i >= 0; i--) {
-        // 假設 Firework 實例有 update() 和 show() 方法
-        fireworks[i].update(); 
+        fireworks[i].update();  
         fireworks[i].show();
         
-        // 假設 Firework 實例有 isFinished() 方法來判斷是否結束
         if (fireworks[i].isFinished()) {
             // 如果煙火完成，則從陣列中移除
             fireworks.splice(i, 1);
         }
     }
-    // =================================================================
+}
+
+
+// =================================================================
 // 步驟三：煙火粒子系統定義 (Firework 和 Particle 類別)
+// **重要：這些類別必須定義在全域範圍，不能在 setup 或 draw 函數內部**
 // -----------------------------------------------------------------
 
 // 全域重力向量
 const gravity = 0.2; 
-const colors = [];
-
-// 在 setup() 中初始化顏色
-function initColors() {
-    for (let i = 0; i < 255; i++) {
-        // 使用 HSB 色彩模式創建彩虹色
-        colors.push(color(random(255), 255, 255)); 
-    }
-}
 
 // 粒子類別 (Particle Class) - 構成爆炸碎片
 class Particle {
     constructor(x, y, hu, firework) {
         this.pos = createVector(x, y);
-        this.firework = firework; // 是否為發射中的火箭 (true) 或爆炸後的碎片 (false)
+        this.firework = firework; 
         this.lifespan = 255; 
-        this.hu = hu;
+        this.hu = hu; // HSB 顏色 (Hue)
         
         if (this.firework) {
             // 火箭向上發射
@@ -209,11 +173,12 @@ class Particle {
 
     // 繪製粒子
     show() {
-        colorMode(HSB);
+        // 由於 setup() 中已設定 colorMode(HSB, 255)，這裡不需要切換顏色模式
         
         if (!this.firework) {
             // 碎片
             strokeWeight(2);
+            // HSB(hu, 255, 255, lifespan) - 高飽和、高亮度、逐漸透明
             stroke(this.hu, 255, 255, this.lifespan);
         } else {
             // 火箭
@@ -221,16 +186,15 @@ class Particle {
             stroke(this.hu, 255, 255);
         }
         point(this.pos.x, this.pos.y);
-        colorMode(RGB); // 恢復 RGB 模式，避免影響其他繪圖
     }
 }
 
 // 煙火類別 (Firework Class) - 代表一個完整的煙火從發射到爆炸
 class Firework {
     constructor() {
-        // 隨機發射位置在畫布底部
-        this.hu = random(255); // 隨機顏色
-        this.firework = new Particle(random(width), height, this.hu, true); // 火箭粒子
+        this.hu = random(255); // 隨機顏色 (0-255)
+        // 火箭粒子在畫布底部隨機位置發射
+        this.firework = new Particle(random(width), height, this.hu, true); 
         this.exploded = false;
         this.particles = [];
     }
@@ -280,26 +244,3 @@ class Firework {
         }
     }
 }
-
-
-// --- 警告：您還需要在 setup() 中加入顏色模式設定！ ---
-// 請修改您的 setup 函數，讓顏色模式能夠支援煙火的 HSB 顏色。
-
-/* 您的 setup() 應該修改為：
-function setup() { 
-    createCanvas(windowWidth / 2, windowHeight / 2); 
-    background(0); // 將背景設為黑色，煙火效果更明顯
-    colorMode(HSB, 255); // 設定為 HSB 顏色模式，H:0-255, S:0-255, B:0-255
-    // noLoop(); // 由於需要動畫，此行應移除或註解
-} 
-*/
-
-    // 如果您想要更複雜的視覺效果，還可以根據分數修改線條粗細 (strokeWeight) 
-    // 或使用 sin/cos 函數讓圖案的動畫效果有所不同 
-}
-
-// *** 警告/提醒：為了讓上述煙火邏輯 (C 部分) 正常運行，您必須定義以下類別：***
-// class Particle { ... }
-// class Firework { ... }
-// 這些類別應包含必要的屬性 (位置、速度、顏色等) 和方法 (update, show, isFinished)。
-// 由於篇幅限制，這裡不提供完整的粒子系統程式碼。
